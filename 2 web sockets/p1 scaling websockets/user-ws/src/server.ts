@@ -28,9 +28,9 @@ wss.on("connection", (ws: WebSocket) => {
             // Check if the WebSocket is already in the room before adding
             if(!rooms[room].sockets.includes(ws)){
                 rooms[room].sockets.push(ws);
-                ws.send(JSON.stringify({ type: WS_EVENTS.MESSAGE, message: `User joined the room ${room} successfully!` }));
+                ws.send(JSON.stringify({ type: WS_EVENTS.CONNECTED, message: `User joined the room ${room} successfully!` }));
             } else {
-                ws.send(JSON.stringify({ type: WS_EVENTS.MESSAGE, message: `You are already in room ${room}` }));
+                ws.send(JSON.stringify({ type: WS_EVENTS.ERROR, message: `You are already in room ${room}` }));
             }
         }
 
@@ -44,7 +44,7 @@ wss.on("connection", (ws: WebSocket) => {
                         }
                     });
                 }else{
-                    ws.send(JSON.stringify({ type: WS_EVENTS.MESSAGE, message: `You are not in room ${room}` }));
+                    ws.send(JSON.stringify({ type: WS_EVENTS.ERROR, message: `You are not in room ${room}` }));
                 }
             }else{
                 ws.send(JSON.stringify({ type: WS_EVENTS.ERROR, message: "Room not found" }));
