@@ -1,4 +1,3 @@
-import { WebSocket } from "ws";
 import { WS_EVENTS } from "./utils/constants";
 
 const BACKEND_URL = "ws://localhost:3000";

@@ -9,6 +9,15 @@ interface Room{
 
 const rooms:Record<string,Room>={};
 
+const RELAYER_URL = "ws://localhost:8000";
+const relayerSocket = new WebSocket(RELAYER_URL);
+
+relayerSocket.on("message",(message:string)=>{
+    wss.clients.forEach((client:WebSocket)=>{
+        client.send(message);
+    })
+})
+
 // in websocket data comes in two formmrt only string and binary    
 wss.on("connection", (ws: WebSocket) => {
     ws.on("error", (e)=>{
