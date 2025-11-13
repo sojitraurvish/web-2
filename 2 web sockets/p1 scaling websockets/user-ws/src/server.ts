@@ -46,7 +46,7 @@ wss.on("connection", (ws: WebSocket) => {
     });
 
     ws.on("message", (message: string) => {
-        const { room, type, message: msg} = JSON.parse(message);
+        const { room, type, message: msg} = JSON.parse(message);// sends string or binary data
 
         if(type===WS_EVENTS.JOIN_ROOM){
             if(!rooms[room]){
