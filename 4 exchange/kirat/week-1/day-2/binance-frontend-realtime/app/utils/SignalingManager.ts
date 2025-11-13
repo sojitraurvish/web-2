@@ -5,12 +5,12 @@ export const BASE_URL = "wss://ws.backpack.exchange/"
 export class SignalingManager {
     private ws: WebSocket;
     private static instance: SignalingManager;
-    private bufferedMessages: any[] = [];
+    private bufferedMessages: any[] = [];// MINE-NOTE: a buffer to store the messages that are not yet sent to the server due to the connetion is not established yet and you jsut nned to call then send message function and in case of socket io it also has the same code inner the hood so you do need to check Socket.connected{Seocket.emit} 
     private callbacks: any = {};
     private id: number;
     private initialized: boolean = false;
 
-    private constructor() {
+    private constructor() { // MINE-NOTE: a class has private contractor that is called singleton pattern
         this.ws = new WebSocket(BASE_URL);
         this.bufferedMessages = [];
         this.id = 1;
@@ -81,7 +81,7 @@ export class SignalingManager {
         this.ws.send(JSON.stringify(messageToSend));
     }
 
-    async registerCallback(type: string, callback: any, id: string) {
+    async registerCallback(type: string, callback: any, id: string) { // MINE-NOTE: registert the callback funtion which will rerender new data seee marketBar.tsx
         this.callbacks[type] = this.callbacks[type] || [];
         this.callbacks[type].push({ callback, id });
         // "ticker" => callback
@@ -96,3 +96,44 @@ export class SignalingManager {
         }
     }
 }
+
+
+// export const MarketBar = ({market}: {market: string}) => {
+//     const [ticker, setTicker] = useState<Ticker | null>(null);
+
+//     useEffect(() => {
+//         getTicker(market).then(setTicker);
+//         SignalingManager.getInstance().registerCallback("ticker", (data: Partial<Ticker>)  =>  setTicker(prevTicker => ({
+//             firstPrice: data?.firstPrice ?? prevTicker?.firstPrice ?? '',
+//             high: data?.high ?? prevTicker?.high ?? '',
+//             lastPrice: data?.lastPrice ?? prevTicker?.lastPrice ?? '',
+//             low: data?.low ?? prevTicker?.low ?? '',
+//             priceChange: data?.priceChange ?? prevTicker?.priceChange ?? '',
+//             priceChangePercent: data?.priceChangePercent ?? prevTicker?.priceChangePercent ?? '', 
+//             quoteVolume: data?.quoteVolume ?? prevTicker?.quoteVolume ?? '',
+//             symbol: data?.symbol ?? prevTicker?.symbol ?? '',
+//             trades: data?.trades ?? prevTicker?.trades ?? '',
+//             volume: data?.volume ?? prevTicker?.volume ?? '',
+//         })), `TICKER-${market}`);
+//         SignalingManager.getInstance().sendMessage({"method":"SUBSCRIBE","params":[`ticker.${market}`]}	);
+
+//         return () => {
+//             SignalingManager.getInstance().deRegisterCallback("ticker", `TICKER-${market}`);
+//             SignalingManager.getInstance().sendMessage({"method":"UNSUBSCRIBE","params":[`ticker.${market}`]}	);
+//         }
+    // }, [market])
+
+
+    // setBids((originalBids) => {
+    //     const bidsAfterUpdate = [...(originalBids || [])]; // MINE-NOTE: if you are ever need update state variable then first make a copy of it and then update other wise sometimes it does not rerender the ui 
+
+    //     for (let i = 0; i < bidsAfterUpdate.length; i++) {
+    //         for (let j = 0; j < data.bids.length; j++)  {
+    //             if (bidsAfterUpdate[i][0] === data.bids[j][0]) {
+    //                 bidsAfterUpdate[i][1] = data.bids[j][1];
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     return bidsAfterUpdate; 
+    // });
