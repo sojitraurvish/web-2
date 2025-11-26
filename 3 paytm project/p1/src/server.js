@@ -3,7 +3,7 @@
   const app = express();
 
   app.use(express.json());
-
+// to versioning your apis
   app.use("/api/v1",router);  
 
   app.listen(3000, () => {
