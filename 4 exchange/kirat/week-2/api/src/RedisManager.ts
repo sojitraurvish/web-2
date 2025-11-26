@@ -22,10 +22,10 @@ export class RedisManager {
         return this.instance;
     }
 
-    public sendAndAwait(message: MessageToEngine) {
+    public sendAndAwait(message: MessageToEngine) { // MINE-NOTES
         return new Promise<MessageFromOrderbook>((resolve) => {
             const id = this.getRandomClientId();
-            this.client.subscribe(id, (message) => {
+            this.client.subscribe(id, (message) => { 
                 this.client.unsubscribe(id);
                 resolve(JSON.parse(message));
             });

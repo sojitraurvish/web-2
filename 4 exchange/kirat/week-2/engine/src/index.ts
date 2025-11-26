@@ -13,7 +13,7 @@ async function main() {
         if (!response) {
 
         }  else {
-            engine.process(JSON.parse(response));
+            engine.process(JSON.parse(response)); // here you do not need to put await because everything happens on the single thread and three is and database call for which you have to wait
         }        
     }
 

@@ -41,7 +41,7 @@ export class Engine {
         }, 1000 * 3);
     }
 
-    saveSnapshot() {
+     saveSnapshot() {
         const snapshotSnapshot = {
             orderbooks: this.orderbooks.map(o => o.getSnapshot()),
             balances: Array.from(this.balances.entries())
