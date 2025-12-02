@@ -1,0 +1,24 @@
+{
+  "name": "sql-commands",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "create-table": "tsx src/create-table.ts",
+    "create-index": "tsx src/create-index.ts",
+    "insert-data": "tsx src/insert-data.ts",
+    "get-data": "tsx src/get-data.ts",
+    "update-data": "tsx src/update-data.ts",
+    "delete-data": "tsx src/delete-data.ts"
+  },
+  "dependencies": {
+    "@types/pg": "^8.10.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
