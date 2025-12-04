@@ -3,8 +3,23 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "npm run build && npm run start",
+
+    "create:user": "npm run build && node dist/1-create-user.js",
+    "create:post": "npm run build && node dist/2-create-post.js",
+    "create:user-with-post": "npm run build && node dist/3-create-user-with-post.js",
+    "create:get-users": "npm run build && node dist/4-get-users.js",
+    "create:delete-all-unpublish-posts": "npm run build && node dist/5-delete-all-unpublish-posts.js",
+    "create:get-posts-with-user-data": "npm run build && node dist/6-get-posts-with-user-data.js",
+    "create:update-user": "npm run build && node dist/7-update-user.js",
+    "create:filters": "npm run build && node dist/8-filters.js",
+    "create:pagination": "npm run build && node dist/9-pagination.js"
+
   },
   "keywords": [],
   "author": "",
@@ -14,7 +29,6 @@
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
     "prisma": "^7.1.0",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
