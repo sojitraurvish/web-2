@@ -105,3 +105,7 @@ you can do that by changin the configarations here
 sudo vi /etc/hosts
 
 // certificate management or https we will learn in letter videos
+
+
+in callage you have one public ip via that your callage connected to the world - if some website block this main ip now boddy in call can access that site
+and you all have the private ip in your class room router
