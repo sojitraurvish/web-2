@@ -1,5 +1,8 @@
 https://projects.100xdevs.com/tracks/g0AcDSPl74nk45ZZjRdU/aws-4
 
+if http://urvish.com/todos and if do not wirte port then by defalut it is on 80
+if https://urvish.com/todos and if do not wirte port then by defalut it is on 443
+
 // for cli login to the actual machine
 ssh -> 22
 
@@ -109,3 +112,21 @@ sudo vi /etc/hosts
 
 in callage you have one public ip via that your callage connected to the world - if some website block this main ip now boddy in call can access that site
 and you all have the private ip in your class room router
+
+
+for cerrificate management - you can use paid one but this is free and you do not have to warry about key manangement by your self also the port management 
+
+// https://certbot.eff.org/instructions?ws=nginx&os=snap
+
+// select nginx and os linux
+
+// install certboat
+sudo snap install --classic certbot
+
+// link your cert boat by runing this command
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+
+// because nginx is what runing on port 80 - for which domain you want to activate certificate for select that and it will add certificate for you and automatically https will start working, it also add the entiry for 443 in your nginx proxy file and also add the entriry for redirection for https if someone calls http in same file - if you do manually then you have to add ceritficte private key manually in your nginx proxy file manually
+sudo certbot --nginx
+
+then restart the nginx once for new changes if not visible
