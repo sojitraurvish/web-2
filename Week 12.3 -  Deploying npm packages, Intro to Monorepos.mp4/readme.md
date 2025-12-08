@@ -50,4 +50,10 @@ vi .npmignore
 // to again publish 
 npm publish - but you have to change the version 1.0.1 in package.json file
 
-// now you can use it anywhere you want at frotend backend everywhere but you will get error if you import it in ts file
+// now you can use it anywhere you want at frotend backend everywhere but you will get error if you import it in ts file and it ask you to install the types for that
+
+.d.ts there this theired type of files called declarations files which includes only types for your package
+
+but how to create this file 
+go to your tsconfig.json file and write new key here 
+"declaration":true - compile and see the dist folder
