@@ -1,0 +1,1 @@
+docker run -p -v ./app:/nextapp/app 3000:3000 nextapp
