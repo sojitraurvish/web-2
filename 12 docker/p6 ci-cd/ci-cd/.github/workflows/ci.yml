@@ -1,0 +1,36 @@
+# if you code succesed then you get green checkmark on github
+name: Linting and formating on Pull Request CI
+
+on:
+  pull_request:
+    branches:
+    - main
+
+jobs: 
+  build-job:
+    name: build the application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      # - name: generate prisma client
+      #   run: cd db && npx prisma generate && cd ..
+
+      - name: build the application
+        run: npm run build
+
+      # - name: check linting 
+      #   run: npm run lint:check
+
+      # - name: check formating
+      #   run: npm run formate:fix
+
