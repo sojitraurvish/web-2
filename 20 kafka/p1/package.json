@@ -1,0 +1,26 @@
+{
+  "name": "p1",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsc -b && node dist/1-single-file/server.js",
+    "consumer": "tsc -b && node dist/2-seperate-file/consumer.js",
+    "producer": "tsc -b && node dist/2-seperate-file/producer.js",
+    "consumer-partitions": "tsc -b && node dist/3-partitions/consumer.js",
+    "producer-partitions": "tsc -b && node dist/3-partitions/producer.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.13.1",
+  "devDependencies": {
+    "nodemon": "^3.1.11",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  }
+}

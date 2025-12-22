@@ -1,0 +1,1 @@
+{"root":["./src/1-single-file/server.ts","./src/2-seperate-file/consumer.ts","./src/2-seperate-file/producer.ts","./src/3-partitions/consumer.ts","./src/3-partitions/producer.ts"],"version":"5.9.3"}
