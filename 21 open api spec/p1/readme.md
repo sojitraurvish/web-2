@@ -17,7 +17,7 @@
 npx openapi-typescript-codegen --input ./spec.json --output ./generated
 npx openapi-typescript-codegen --input ./spec.json<from this spec file> --output<generate library in this folder> ./generated
 
-// you have to add base url before you generate spec file other wise this package will not work 
+// you have to add base url before you generate spec file other wise this package will not work (so check all the config)
 // this is how i can use it in diff project not in same project, and in diff project you have to copy this generated folder the you can use it
 // import {DefaultRouter} from "../generated/index.ts";
 // const response = await DefaultRouter.getUsers("1")
