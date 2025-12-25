@@ -21,3 +21,6 @@ npx openapi-typescript-codegen --input ./spec.json<from this spec file> --output
 // this is how i can use it in diff project not in same project, and in diff project you have to copy this generated folder the you can use it
 // import {DefaultRouter} from "../generated/index.ts";
 // const response = await DefaultRouter.getUsers("1")
+
+
+in future if you change your backend code then simply rebuild the client and it start complanging to people who is using it to fix 
