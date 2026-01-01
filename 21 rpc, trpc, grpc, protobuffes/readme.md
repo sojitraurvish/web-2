@@ -1,3 +1,7 @@
+grpc is not for browsers it is for backend to talk to each other still there are ways we can do it but officially for backend to talk to each other
+
+that is why grpc can not be used at every places but protobuffs can 
+
 // https://projects.100xdevs.com/tracks/grpc/grpc-1 
 json rpc(send json data- blockchain), rpc, grpc, trpc - you do not have to worry about underlaying things you just need to call function
 
@@ -28,3 +32,9 @@ proto buffs - compresss data and then send over to server to reduce your ec2 and
 // node node_modules/@grpc/proto-loader/build/bin/groto-loader-gen-types.js 
 // so via this script you can create types for your .proto file 
 // ./node_modules/@grpc/proto-loader/build/bin/proto-loader-gen-types.js  --longs=String --enums=String --defaults --oneofs --grpcLib=@grpc/grpc-js --outDir=./src/generated ./src/a.proto
+
+grpc mostly used in go 
+cosmos is blockchian written in go and let you create your own blockchain
+
+
+
