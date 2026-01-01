@@ -28,3 +28,8 @@ storage         distribution
 2GB uses        20 Gb of bandwith is consumened (if 100 people visites it)
 
 $0.02 per month /   $0.01 daller for distribution
+
+
+
+// diff video for s3 stroge with cdn
+https://www.youtube.com/watch?v=qlvBBryYB2Q
