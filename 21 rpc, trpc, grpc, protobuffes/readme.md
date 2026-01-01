@@ -23,3 +23,8 @@ proto buffs - compresss data and then send over to server to reduce your ec2 and
 (borsh.js explore this )
 
 // .proto file usecase you can add in postman and get all the metionds and you can auto generate client for all languages 
+
+// but what about proper types - @grpc/proto-loader give you script that help you create types
+// node node_modules/@grpc/proto-loader/build/bin/groto-loader-gen-types.js 
+// so via this script you can create types for your .proto file 
+// ./node_modules/@grpc/proto-loader/build/bin/proto-loader-gen-types.js  --longs=String --enums=String --defaults --oneofs --grpcLib=@grpc/grpc-js --outDir=./src/generated ./src/a.proto
