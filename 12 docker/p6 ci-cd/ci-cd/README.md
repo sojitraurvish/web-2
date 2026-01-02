@@ -35,8 +35,8 @@ fist manually ssh in your ec2 and install docker over there -> and write the cod
 
 
 
-
-
+<!-- how to deply websockt server -->
+https://www.youtube.com/watch?v=iG1gjOjcjTQ
 
 
 
