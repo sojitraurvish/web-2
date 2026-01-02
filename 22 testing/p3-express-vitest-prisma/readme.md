@@ -16,7 +16,7 @@ url
 npx prisma migrate dev - this is not needed to do - to mingrate your schema 
 npx prisma generate - client  prisma.some.create
 
-// if you want to mock out redis then see pic 
+// if you want to mock out redis then see pic (so you can mock out any expternal services like  rebitmq kafka, redis)
 
 in intigration test you need to make sure user has docker in there machien then you have to start db locally in user machine, then
 have to updated it's connection string in your project and at the end you have to clear the docker container
