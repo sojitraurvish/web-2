@@ -1,0 +1,11 @@
+# see iamge 1 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx # this is name for it and it goes in metadata
+spec:
+  containers: # it can runing multiple container but we are just giving only one container right now, if i add multiple then single pod start multiple containers
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
