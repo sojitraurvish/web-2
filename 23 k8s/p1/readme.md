@@ -182,3 +182,6 @@ pod/nginx created
 
 // what is benifit of doing this 
 / if i change this image name after it is created then it change that new iamge in the final pod, and you do it again and again in ci-cd pipelines
+
+
+you can start pods in master nods but you should not because it has 10 diff things to runs so you should not overwhelme it, so it should be seperate in worker node
