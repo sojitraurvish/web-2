@@ -25,3 +25,6 @@ Discovered @honojs—write your endpoints once in an Express-style API with Hono
 
 // to create a hono app
 // npm create hono@latest hono-app
+
+
+if you want to deploy your next js app on server all around the world the use cloudflre workes, if user hits the server then they get to the closest age server

@@ -1,0 +1,13 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP  # the protocol you on wehich you expose on Which is TCP because it is http server we are hitting up
+      port: 80 # the port on which it should be expose on internally   # Service port
+      targetPort: 80 # the target on which you should hit the container    # Routes to container 
+  type: LoadBalancer # there are diff types of services you can create

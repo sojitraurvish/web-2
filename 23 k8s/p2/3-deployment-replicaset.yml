@@ -21,3 +21,62 @@ spec:
         # env:
         # - name: POSTGRES_PASSWORD
         #   value: "yourpassword"
+
+
+
+# ============================================================================
+# IMPORTANT: Pod Networking Concepts
+# ============================================================================
+#
+# Key Concept: Pods don't have their own separate "pod port"
+#
+# A pod has:
+#   - One IP address (shared by all containers in the pod)
+#   - All containers share the same network namespace
+#   - All container ports are accessible via the pod's IP address
+#
+# Example with different container ports:
+#   Pod IP: 10.244.1.5
+#   ├── Container 1 (nginx): containerPort 80   → Accessible at 10.244.1.5:80
+#   └── Container 2 (nginx-2): containerPort 8080 → Accessible at 10.244.1.5:8080
+#
+# ============================================================================
+# How Services Route Traffic
+# ============================================================================
+#
+# In your Service file (5-node-service.yml):
+#   - port: 80        → Service exposes port 80
+#   - targetPort: 80  → Routes to containerPort 80 on the pod
+#
+# If containers have different ports (e.g., 80 and 8080), you have two options:
+#
+# Option 1: Two separate Services
+#   - Service 1: port 80 → targetPort 80
+#   - Service 2: port 8080 → targetPort 8080
+#
+# Option 2: One Service with multiple port mappings
+#   Example:
+#     apiVersion: v1
+#     kind: Service
+#     metadata:
+#       name: nginx-service
+#     spec:
+#       selector:
+#         app: nginx
+#       ports:
+#         - port: 80        # Service port
+#           targetPort: 80  # Routes to container 1
+#         - port: 8080      # Service port
+#           targetPort: 8080 # Routes to container 2
+#       type: NodePort
+#
+# ============================================================================
+# Summary
+# ============================================================================
+#
+# Pod = One IP address
+# Containers = Their ports are accessible via the pod IP
+# Service = Routes traffic from Service port → pod IP:targetPort (containerPort)
+#
+# There is no separate "pod port" — the pod's ports are the container ports,
+# accessible via the pod's IP address.

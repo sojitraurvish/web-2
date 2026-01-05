@@ -1,0 +1,14 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP  # the protocol you on wehich you expose on Which is TCP because it is http server we are hitting up
+      port: 80 # the port on which it should be expose on internally   # Service port
+      targetPort: 80 # the target on which you should hit the container    # Routes to container 
+      nodePort: 30007  # at where it should be expose on the internet, 30000 - 30200 this range that is why we do not use it in production
+  type: NodePort # there are diff types of services you can create

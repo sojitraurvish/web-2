@@ -500,3 +500,161 @@ kubectl rollout undo deployment/nginx-deployment
 
 
 // now let say i update the new correct image to postgress with env vars
+
+// how things get autoscale - keep this in mind - here you can play with your pods when to scale up and down
+q - if i create five nodes then will it keep on runing eventhough i do not have anyting inside it? yes
+and that is way i would do somethign like this will choose min 2 nods and max 10 nodes so it will automatically increase more node when there is more load (see image 1)
+
+if you have microservice architecture where there is lot of small small process or still can be depend on the usecase but microsercies could be one of them why to share the compute
+k8s -> container orchestrator
+    -> poovides autoscaling
+
+
+
+-----------
+
+each node has diff ip and if you want your pod which is in that node can be access via that ip 55.22.1.3:80 then you can not access it ,
+if you want that req to reach a pod then you have to create anouther service called service, a services which exposis your pods over the internet,
+if you want to get public ip for your software in pod or pod and want to point it to urvish.100x.com domain then you need to create a sevice in k8s
+
+// if i do this then it will tell me the ip where my container is running so this is the ip of your pod
+kubectl get pods -owide
+NAME                                READY   STATUS    RESTARTS   AGE   IP            NODE                 NOMINATED NODE   READINESS GATES
+nginx-deployment-59f86b59ff-4wqbq   1/1     Running   0          32s   10.244.1.15   local-mine-worker    <none>           <none>
+nginx-deployment-59f86b59ff-4zbwx   1/1     Running   0          32s   10.244.1.16   local-mine-worker    <none>           <none>
+nginx-deployment-59f86b59ff-cnnhq   1/1     Running   0          32s   10.244.2.13   local-mine-worker2   <none>           <none>
+
+but if i try to goes to this ip 10.244.1.15:80 where nginx should be running, but this is private ip because it start with 10.something that can be used for one pod to talk to another pod in same node or other node but outside world can not access these pods untill you introduce the service
+
+// now how to you reach to continer you create a service
+
+----------------------------------------------------------------- service theory
+Service
+In Kubernetes, a "Service" is an abstraction that defines a logical set of Pods and a policy by which to access them. - <when you create service you have to tell it, that you can access this pod and this pod, so these are the two pods where i want you to forward the traffic to , and how do you want to this service to descoverable, do you want to craete a load balancer, or do you just want to expose the ip of the node, so you need to tell it logical set of pods - so what all pods need to hit and policy by which to access them- how it can assess>
+Kubernetes Services provide a way to expose applications running on a set of Pods as network services. Here are the key points about Services in Kubernetes:
+Key concepts
+Pod Selector: Services use labels to select the Pods they target. A label selector identifies a set of Pods based on their labels.
+Service Types:
+ClusterIP: Exposes the Service on an internal IP in the cluster. This is the default ServiceType. The Service is only accessible within the cluster.
+NodePort: Exposes the Service on each Node’s IP at a static port (the NodePort). A ClusterIP Service, to which the NodePort Service routes, is automatically created. You can contact the NodePort Service, from outside the cluster, by requesting <NodeIP>:<NodePort>.
+LoadBalancer: Exposes the Service externally using a cloud provider’s load balancer. NodePort and ClusterIP Services, to which the external load balancer routes, are automatically created.
+Endpoints: These are automatically created and updated by Kubernetes when the Pods selected by a Service's selector change.
+----------------------------------------------------------------- service theory
+
+now lets create are very first service that will expose our app over our cluser
+
+Create service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service # name of the service
+spec:
+  selector: # how does it know at what ports to forward traffic to? ans is the pods which has nginx in there lables, as like deployment identifies the pods, replicasets identifies the pods
+    app: nginx
+  ports:
+     - protocol: TCP  # the protocol you on wehich you expose on Which is TCP because it is http server we are hitting up
+      port: 80 # the port on which it should be expose on internally
+      targetPort: 80 # the target on which you should hit the container
+      nodePort: 30007  # at where it should be expose on the internet, , 30000 - 30200 this range taht is why you do not use node port in production
+  type: NodePort # there are diff types of services you can create
+
+  #if you has k8s cluster which has let say two machines and if fist machine is runing two pods and second mahcine is ruunig thired pod
+  # fist two pods are the nginx pods in first machine
+  # you can craete a verious types of services 
+  
+  # see pic 2 and 3 and 15
+  # Cluster IP - one is  rather then  (second one which has one pod) directly hiting node 1's nginx-pod-1 and nginx-pod-2, it can hit the service(cluster ip) which has internal ip call 1.2.3.4 you hit this ip and which will load balance req between  nginx-pod-1 and nginx-pod-2, and that is one type of service called cluster IP
+
+  #
+  # Node port - if i hit the specifc node1 on sepecific port then it should take me to both the pod in loadbalce fation inside that node1 (see image 4)
+  # the multiple node you have, you can expose the same port on all of these nodes and they will all talk to the same set of containers that you have selected (see iamge 5)
+  # currectly i have 3 nods(including master) and node port, and node service service expose single port on all threes of these, i can hit any one of three nodes on that specific port and it forward req to these container (see iamge 6)
+
+// apply the service 
+ kubectl apply -f 5-node-service.yml 
+service/nginx-service created
+
+urvishsojitra@Urvishs-Mac-mini p2 % kubectl get svc
+NAME            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+kubernetes      ClusterIP   10.96.0.1      <none>        443/TCP        7h57m
+nginx-service   NodePort    10.96.217.40   <none>        80:30007/TCP   5s      <------- http://localhost:30007/ this is not runing but if you so same thing in valter or any cloud provider then it is running 
+
+// in cloud proder make sure you have created firewalle rule for port 30007(see pic 14) instead youc can also crete firewell group
+
+// i have created node port that mean if i goes to any of the nodes, if i goes to the ip of any of these three nodes then i should be able to find soming runing here at 30007, but i am doing it locally that is why it is not wrokiung
+
+urvishsojitra@Urvishs-Mac-mini p2 % docker ps
+CONTAINER ID   IMAGE                  COMMAND                  CREATED       STATUS       PORTS                       NAMES
+3ac4f7060668   kindest/node:v1.35.0   "/usr/local/bin/entr…"   8 hours ago   Up 8 hours                               local-mine-worker
+b504801e96fe   kindest/node:v1.35.0   "/usr/local/bin/entr…"   8 hours ago   Up 8 hours                               local-mine-worker2
+781145a62d43   kindest/node:v1.35.0   "/usr/local/bin/entr…"   8 hours ago   Up 8 hours   127.0.0.1:50995->6443/tcp   local-mine-control-plane
+
+// the reason it did not work locallly because when i start these machine locally then there is somthing running on this container on 30007, but i have not expose it on my mac, so the probelm is when you run kind it create 3 docker container as node and that you have to expose with your mac machine on port 30007 then only can req can goes inside contaienr as node, there is only one port mapping  127.0.0.1:50995->6443/tcp(this mean if any is ruuing on 6443 then i can visite it on lcoalhost:50995) but i have to add more that says my machine 30007 can point here 
+// see image 7 - this extra step i have to do because i am ruuing it via kind locally, and how we can do this when you
+
+kind: Cluster # see image 8
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane 
+  extraPortMappings:
+  - containerPort: 30007 
+    hostPort: 30007
+- role: worker
+  extraPortMappings: 
+  - containerPort: 30007 
+    hostPort: 30008
+- role: worker
+  extraPortMappings: 
+  - containerPort: 30007 
+    hostPort: 30009
+
+
+// start new cluster with portmaping with nodes
+// kind create cluster --config 6-clusters-node-with-ports.yml  --name local-mine
+
+
+let see how to do same thing on valter and second thing is via node service you can not run it on port 80 you have to choose some weard port like 30007 so that is why we
+learn second type of service called load balancer service but this does not work locally
+
+load balancer is outside of the cluster not a poat of the cluster it is diff service (see pic 9)
+- and the benifit of this is you never expose your core ip to end users, user only hit load balancer and it hit your actual server 
+but in node port services user directly hits ip of your server, and they will know the ip of your master or worker node
+
+// see image 10 - this configaration you need to add in your config file to connect to your k8s cluter
+so i remove old file with rm ~/.kube/config
+and add new at samelocation vi ~/.kube/config
+
+and how i will get details from cloud
+
+kubectl get nodes
+kubectl get pods
+kubectl get deployment
+kubectl get service
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP  # the protocol you on wehich you expose on Which is TCP because it is http server we are hitting up
+      port: 80 # the port on which it should be expose on internally   # Service port
+      targetPort: 80 # the target on which you should hit the container    # Routes to container 
+  type: LoadBalancer # there are diff types of services you can create
+
+when you apply above service 
+kubectl apply -f 7-lb-service.yml
+
+it creates fresh load balancer service on cloude provider and you can it it by provded ip (see pic 11, 12) use that ip:80 and it will forward req to your containers
+you also have to expose loablancer port:80 then and only it works
+// there are somethisgs are missing how to convert to https and how to attach domainname here, that we will see letter on
+
+
+
+// there is also concept of persiteent volueme to store databasedata or redis data to persist it
+
+
+
