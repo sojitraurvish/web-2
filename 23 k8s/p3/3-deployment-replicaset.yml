@@ -4,7 +4,7 @@ metadata:
   name: nginx-deployment
 spec:
   replicas: 3  # how many replicas i need to specific pod
-  selector:
+  selector:  
     matchLabels: # this is how deployment knows that is my replica set or my pod and this line try to check what all pods have app: set to nginx while doing any opration
       app: nginx
   template:
