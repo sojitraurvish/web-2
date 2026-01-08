@@ -1294,3 +1294,256 @@ Try to figure out how can you rewrite the path to / if you’re using traefik as
 
 if you want to use traffic ingresss controllar -----------------------------------------------------------
 
+
+
+
+
+-------------------------------------------------slides for configmaps and secrets
+
+SO YOU  SHOULD NOT APPLY THESE DEYLOUMENTS AND ALL DIRECTLY RATHAER IT SHOULD FIRST REACHES TO YOUR GITHUB AND OVER THERE CI-CD SHOULD RUNS IT SHOULD REACH TO YOUR CLUSER WE WILL SEE TAHT 
+Secrets and configmaps
+image 12
+ 
+Kubernetes suggests some standard configuration practises. These include things like
+You should always create a deployment rather than creating naked pods
+Write your configuration files using YAML rather than JSON
+Configuration files should be stored in version control before being pushed to the cluster 
+ 
+Kubernetes v1 API also gives you a way to store configuration of your application outside the image/pod
+This is done using 
+ConfigMaps 
+Secrets
+Rule of thumb
+Don’t bake your application secrets in your docker image
+Pass them in as environment variables whenever you’re starting the container
+image 13
+
+
+
+
+
+ConfigMaps vs Secrets
+Creating a ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-config
+data:
+  key1: value1
+  key2: value2
+
+Creating a Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: example-secret
+data:
+  password: cGFzc3dvcmQ=
+  apiKey: YXBpa2V5
+
+Key differences
+
+Purpose and Usage:
+Secrets: Designed specifically to store sensitive data such as passwords, OAuth tokens, and SSH keys.
+ConfigMaps: Used to store non-sensitive configuration data, such as configuration files, environment variables, or command-line arguments.
+
+Base64 Encoding:
+Secrets: The data stored in Secrets is base64 encoded. This is not encryption but simply encoding, making it slightly obfuscated. This encoding allows the data to be safely transmitted as part of JSON or YAML files. // see image 14
+ConfigMaps: Data in ConfigMaps is stored as plain text without any encoding.
+
+Volatility and Updates:
+Secrets: Often, the data in Secrets needs to be rotated or updated more frequently due to its sensitive nature.
+ConfigMaps: Configuration data typically changes less frequently compared to sensitive data.
+
+Kubernetes Features:
+Secrets: Kubernetes provides integration with external secret management systems and supports encryption at rest for Secrets when configured properly. Ref https://secrets-store-csi-driver.sigs.k8s.io/concepts.html#provider-for-the-secrets-store-csi-driver
+ConfigMaps: While ConfigMaps are used to inject configuration data into pods, they do not have the same level of support for external management and encryption. they just exists in you etcd data base of k8s in master node
+
+
+
+
+/// config maps -----------
+
+ConfigMaps
+Ref - https://kubernetes.io/docs/concepts/configuration/configmap/
+A ConfigMap is an API object used to store non-confidential data in key-value pairs. Pods can consume ConfigMaps as environment variables, command-line arguments, or as configuration files in a volume.
+A ConfigMap allows you to decouple environment-specific configuration from your container images, so that your applications are easily portable.
+
+Creating a ConfigMap
+Create the manifest
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecom-backend-config
+data: 
+  # inject these as env vars
+  database_url: "mysql://ecom-db:3306/shop"
+  cache_size: "1000" 
+  payment_gateway_url: "https://payment-gateway.example.com"
+  max_cart_items: "50"
+  session_timeout: "3600"
+
+  # file-like keys if i want to create .env file eventually then so in your final pod where your app is there it will create .env file there
+  application.properties: | app.name=ecom-backend
+  app.environment-production logging.level=INFO
+  max.connections=100
+  database.properties: I
+  db.driverClassName=com.mysql.cj.jdbc.Driver
+  db.username=ecom_user
+  db.password-securepassword
+  db.maxPoolSize=20
+  cache.properties: I
+  cache.type=redis
+  cache.host=redis-cache
+  cache.port=6379
+  cache.ttl=600
+  payment.properties: I
+  gateway.url=https://payment-gateway.example.com
+  gateway.apiKey-your_api_key_here
+  gateway.timeout=30
+
+
+
+Apply the manifest
+	kubectl apply -f cm.yml
+
+Get the configmap
+ kubectl describe configmap ecom-backend-config
+
+Creating an express app that exposes env variables // see image 17 for two diff types of config maps
+Express app code
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+
+const app = express();
+const port = 3000;
+app.get('/', (req, res) => {
+  const envVars = {
+    DATABASE_URL: process.env.DATABASE_URL,
+    CACHE_SIZE: process.env.CACHE_SIZE,
+    PAYMENT_GATEWAY_URL: process.env.PAYMENT_GATEWAY_URL,
+    MAX_CART_ITEMS: process.env.MAX_CART_ITEMS,
+    SESSION_TIMEOUT: process.env.SESSION_TIMEOUT,
+  };
+
+  res.send(`
+    <h1>Environment Variables</h1>
+    <pre>${JSON.stringify(envVars, null, 2)}</pre>
+  `);
+});
+
+app.listen(port, () => {
+  console.log(`App listening at http://localhost:${port}`);
+});
+
+Dockerfile to containerise it
+FROM node:20
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+RUN npx tsc -b
+
+EXPOSE 3000
+CMD [ "node", "index.js" ]
+
+Deploy to dockerhub - https://hub.docker.com/repository/docker/100xdevs/env-backend/general
+
+
+Trying the express app using docker locally
+ docker run -p 3003:3000 -e DATABASE_URL=asd  100xdevs/env-backend
+
+see image 15
+
+
+Try running using k8s locally
+Create the manifest (express-app.yml)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecom-backend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecom-backend
+  template:
+    metadata:
+      labels:
+        app: ecom-backend
+    spec:
+      containers:
+      - name: ecom-backend
+        image: 100xdevs/env-backend
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ecom-backend-config
+              key: database_url
+        - name: CACHE_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: ecom-backend-config
+              key: cache_size
+        - name: PAYMENT_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ecom-backend-config
+              key: payment_gateway_url
+        - name: MAX_CART_ITEMS
+          valueFrom:
+            configMapKeyRef:
+              name: ecom-backend-config
+              key: max_cart_items
+        - name: SESSION_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: ecom-backend-config
+              key: session_timeout
+
+Apply the manifest
+ kubectl apply -f express-app.yml
+
+Create the service (express-service.yml)
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecom-backend-service
+spec:
+  type: NodePort
+  selector:
+    app: ecom-backend
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30007
+
+Apply the service
+kubectl apply -f express-service.yml
+
+Try visiting the website
+
+see iamge 16
+ 
+ lets first does cofig maps parctical
+
+ urvishsojitra@Urvishs-Mac-mini p3 % kubectl apply -f 14-deployment.yml 
+configmap/ecom-backend-config created
+
+ urvishsojitra@Urvishs-Mac-mini p3 % kubectl get configmap
+NAME                  DATA   AGE
+ecom-backend-config   9      11s
+kube-root-ca.crt      1      16h
+
+-------------------------------------------------slides for configmaps and secrets
+
+
