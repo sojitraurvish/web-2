@@ -1074,6 +1074,7 @@ metadata:
   annotations: # when you are string ingress or similar services in future the you can change some data in them you can tolk to them using these annotations
     nginx.ingress.kubernetes.io/rewrite-target: /  # the acnotation that we are using is this, where can find it goes to the ingress docs, why we are adding this beacuse any request coming from k8s.100xdevs.com/apache should goes to second service and reach to coorect pod where appache is ruunig and same thing for k8s.100xdevs.com/nginx(see image 9), 
     # so this mean any req comming from from k8s.100xdevs.com/apache (mean /) goes to at / path to service not apache, and that is why we added rewrite-target to / so that it goes to correct service and pod , else if i do not add this then req goes to /appche in service
+    # nginx.ingress.kubernetes.io/rps: 10 # only 10 req per second per ip address, so this was the down site of service you have to manage sepere rate limite for all servies
 spec:
   ingressClassName: nginx # there aare many infress controllers so we need to tell which one to use 3) types we discussed above
   rules:
@@ -1232,4 +1233,64 @@ so go in // sudo vi /etc/hosts
 
 and take your loadbalncer ip and add entry with your-domain.com so your domain start working locally, instead in read word you add your domain 
 
+
+
+if you want to use traffic ingresss controllar -----------------------------------------------------------
+
+Note - it does not have anotiation as in nginx ingress so how to point req to the services
+
+Trying traefik’s ingress controller
+Traefik is another popular ingress controller. Let’s try to our apps using it next
+Install traefik ingress controller using helm
+helm repo add traefik https://helm.traefik.io/traefik
+helm repo update
+helm install traefik traefi/traefik --namespace traefik --create-namespace
+
+Make sure an ingressClass is created for traefik
+ kubectl get IngressClass
+
+Notice it created a LoadBalancer svc for you
+ kubectl get svc -n traefik
+
+Create a Ingress that uses the traefik ingressClass and traefik annotations (traefik.yml)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traefik-web-apps-ingress
+  namespace: default
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: traefik-domain.com
+    http:
+      paths:
+      - path: /nginx
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service
+            port:
+              number: 80
+      - path: /apache
+        pathType: Prefix
+        backend:
+          service:
+            name: apache-service
+            port:
+              number: 80
+
+Add an entry to your /etc/hosts  (IP should be your loadbalancer IP)
+65.20.90.183    traefik-domain.com
+
+Visit the website
+traefik-domain.com/nginx
+traefik-domain.com/apache
+
+ 
+💡Can you guess what is going wrong? Why are you not seeing anything on this final page?
+
+Assignment
+Try to figure out how can you rewrite the path to / if you’re using traefik as the ingress class
+
+if you want to use traffic ingresss controllar -----------------------------------------------------------
 
