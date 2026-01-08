@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nginx-deployment
-  # namespace: backend
+  namespace: backend
 spec:
   replicas: 3  # how many replicas i need to specific pod
   selector:  

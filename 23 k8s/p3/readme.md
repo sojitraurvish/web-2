@@ -705,3 +705,531 @@ so i want single load balancer and want to route the req either based on
 4) in replat video for each user we start small pod
 
 so that is way ingress comes in to the picture
+
+
+
+
+
+ingress(ingress controller) that is somthing extra that you have to install in your k8s cluster
+
+master node runs kube controller manager which runs bunch of small contrallers inside it, and check have created right replica sets,are there 3 pods are present or not
+incase of ingress controllar you have to bring in here it is not by defalut
+
+and there are many popular companys who have created 
+
+1)nginx ingress controller
+2) haproxy ingress controller
+these two are very famouse for a while
+
+3) trafik -> for profite company who have created
+
+
+Ingress and Ingress Controller
+Ref - https://kubernetes.io/docs/concepts/services-networking/ingress/
+An API object that manages external access to the services in a cluster, typically HTTP.
+Ingress may provide load balancing, SSL termination and name-based virtual hosting.
+
+see image 5 - when ever client sends the req to your ingress managed load balancer( you do not have to create load balancer sevice any more), ingress manages it and create sinlge load balancer for you, any req tha comes (inside the cluter) and first reaches to the ingress pod that is runinng(nginx, or haproxy or trafic or what ever you are using) that is able to looks at url and tell okay you want to goes to api.100xdevs.com then goes to the backend service, if you want to goes to api.100x.com/frontend then goes to the frontend service
+
+if i have simple application which just has frontend and the backend (see pic 6)
+
+
+NOTE - An Ingress does not expose arbitrary ports or protocols. Exposing services other than HTTP and HTTPS to the internet typically uses a service of type Service.Type=NodePort or Service.Type=LoadBalancer.
+
+
+
+Ingress controller
+If you remember from last week, our control plane had a controller manager running.
+Ref - https://projects.100xdevs.com/tracks/kubernetes-1/Kubernetes-Part-1-3
+
+The kube-controller-manager runs a bunch of controllers like
+Replicaset controller
+Deployment controller
+etc
+
+If you want to add an ingress to your kubernetes cluster, you need to install an ingress controller manually. It doesn’t come by default in k8s
+Famous k8s ingress controllers
+The NGINX Ingress Controller for Kubernetes works with the NGINX webserver (as a proxy).
+HAProxy Ingress is an ingress controller for HAProxy.
+The Traefik Kubernetes Ingress provider is an ingress controller for the Traefik proxy.
+Full list - https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/
+
+
+before implemeting ingress we have to understand namespaces
+
+name space let you structure your files pods services better
+
+// by defalut it shows you pods in defalut namespaces
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get pods 
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-59f86b59ff-58sr6   0/1     Unknown   0          10h
+nginx-deployment-59f86b59ff-9qgsb   0/1     Unknown   0          10h
+nginx-deployment-59f86b59ff-ld7sh   0/1     Unknown   0          10h
+
+// show all pods in all the namespaceas 
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get pods --all-namespaces
+NAMESPACE            NAME                                               READY   STATUS    RESTARTS      AGE
+default *              nginx-deployment-59f86b59ff-58sr6                  1/1     Running   1 (15s ago)   10h
+default *            nginx-deployment-59f86b59ff-9qgsb                  1/1     Running   1 (15s ago)   10h
+default *            nginx-deployment-59f86b59ff-ld7sh                  1/1     Running   1 (15s ago)   10h
+kube-system          coredns-7d764666f9-bp4xw                           0/1     Running   1 (15s ago)   10h
+kube-system          coredns-7d764666f9-m9wg8                           0/1     Running   1 (15s ago)   10h
+kube-system          etcd-local-mine-control-plane                      0/1     Running   0             11s
+kube-system          kindnet-4lhx8                                      1/1     Running   1 (15s ago)   10h
+kube-system          kindnet-67h7b                                      1/1     Running   1 (15s ago)   10h
+kube-system          kindnet-zrrng                                      1/1     Running   1 (15s ago)   10h
+kube-system          kube-apiserver-local-mine-control-plane            0/1     Running   0             11s
+kube-system          kube-controller-manager-local-mine-control-plane   0/1     Running   7 (15s ago)   10h
+kube-system          kube-proxy-cwzp5                                   1/1     Running   1 (15s ago)   10h
+kube-system          kube-proxy-hbpbz                                   1/1     Running   1 (15s ago)   10h
+kube-system          kube-proxy-tfz2s                                   1/1     Running   1 (15s ago)   10h
+kube-system          kube-scheduler-local-mine-control-plane            0/1     Running   7 (9h ago)    10h
+local-path-storage   local-path-provisioner-67b8995b4b-982qn            1/1     Running   1 (15s ago)   10h
+
+// get all the name spacees - default is yours and others are kubernaties namanged
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get namespaces
+NAME                 STATUS   AGE
+default              Active   10h
+kube-node-lease      Active   10h
+kube-public          Active   10h
+kube-system          Active   10h
+
+people in the world have very big cluster and all there forntend and backend teams are deplying to the same cluster and now when i run 
+kubctl get pods i just want to see backed team ke pods not frontend team ke because i am port of backend team so namespace let you structure it better
+so create two namespaces
+kubectl create namespace backend 
+kubectl create namespace frontend
+
+NOTE: if i update replicas 3 to 4 then it update my old deplyment in same namespace does not start new deployment, but if i change the name or namespace in metadata then it will not update my old deplyment if start new deployment, so inside metadata if you do not update any thing then it update in old or exsiting running deployment and if you updated somthing inside metadata then it start new depluyment with new name(if updated) or in new namespace(if updated)
+
+
+now any time you are starting pod or deplyment let says the over there you can say that you are part of backend namespace
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  # namespace: backend   <-------------------------
+  replicas: 3  # how many replicas i need to specific pod
+  selector:  
+    matchLabels: # this is how deployment knows that is my replica set or my pod and this line try to check what all pods have app: set to nginx while doing any opration
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        # image: postgres:latest
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        # env:
+        # - name: POSTGRES_PASSWORD
+        #   value: "yourpassword"
+
+-------------------
+Namespaces
+
+In Kubernetes, a namespace is a way to divide cluster resources between multiple users/teams. Namespaces are intended for use in environments with many users spread across multiple teams, or projects, or environments like development, staging, and production.
+When you do 
+// kubectl get pods
+
+it gets you the pods in the default namespace
+Creating a new namespace
+Create a new namespace
+// kubectl create namespace backend-team
+
+Get all the namespaces
+// kubectl get namespaces
+
+Get all pods in the namespace
+// kubectl get pods -n my-namespace
+
+Create the manifest for a deployment in the namespace
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: backend-team
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+
+Apply the manifest
+// kubectl apply -f deployment-ns.yml
+
+Get the deployments in the namespace
+// kubectl get deployment -n backend-team
+
+Get the pods in the namespace
+// kubectl get pods -n backend-team
+
+Set the default context to be the namespace
+// kubectl config set-context --current --namespace=backend-team
+
+Try seeing the pods now
+kubectl get pods
+
+Revert back the kubectl config
+kubectl config set-context --current --namespace=default
+
+---------------------
+
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get pods -owide
+NAME                                READY   STATUS    RESTARTS       AGE   IP           NODE                 NOMINATED NODE   READINESS GATES
+nginx-deployment-59f86b59ff-58sr6   1/1     Running   1 (120m ago)   12h   10.244.1.2   local-mine-worker    <none>           <none>
+nginx-deployment-59f86b59ff-9qgsb   1/1     Running   1 (120m ago)   12h   10.244.1.3   local-mine-worker    <none>           <none>
+nginx-deployment-59f86b59ff-ld7sh   1/1     Running   1 (120m ago)   12h   10.244.2.2   local-mine-worker2   <none>           <none>
+
+so while creating pods you can attach namespaces so backend team only get backend pods and frontend team only frontend ones, it is just logical sepratetion otherwise 
+they may runs together only
+
+------------------------------------ from slides
+
+install helm in you pc it make easy to install nginx ingress
+
+
+Install the nginx ingress controller
+
+Ref - https://docs.nginx.com/nginx-ingress-controller/installation/installing-nic/installation-with-manifests/
+
+Using helm
+- Install helm - package manager for k8s
+
+Ref - https://helm.sh/
+Installation - https://helm.sh/docs/intro/install/
+
+// brew install helm
+// helm version
+
+- Add the ingress-nginx chart
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace
+
+Check if you have pods running in the 
+ kubectl get pods -n ingress-nginx
+
+Default loadbalancer service
+You will notice that if you use helm  to install the nginx-ingress-controller, it creates a Loadbalancer service for you
+kubectl get services --all-namespaces
+
+
+This routes all the traffic to an nginx pod
+kubectl get pods -n ingress-nginx
+
+This means the first part of our ingress deployment is already created
+// see image 7
+
+------------------------------------
+
+so now get back to create atchtecture as per image 6 we have to create 5 things as yo can see in the pic
+
+now we are adding ingress controller in to our k8s cluter and which will starts its own set of pods, so it should run on the seperate namespace, so in future when you bring external k8s configs like ingress so you want to put in seperate namespace that is why you need name space here
+
+ingress and ingress controller are two diff things, you need at least one ingress controller that is ruuning and only that you can start ingresss- as like pods and deplymnet, ingress is k8s object but by default we do not have ingress contralller by defalut we have to bring one  
+
+
+you can bring ingress 2 ways
+1 by running 9-nginx-ingress-controller
+
+2 as per the above slides using helm package manager
+so you can use these charts in helm it bring 9-nginx-ingress-controller file to start ingreess, and appply it
+- Add the ingress-nginx chart
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx<repo where my helm chart exists>
+helm repo update ---> update that repo
+helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace -> and install it 
+
+
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get namespaces
+NAME                 STATUS   AGE
+backend              Active   83m
+default              Active   13h
+ingress-nginx        Active   4m52s
+kube-node-lease      Active   13h
+kube-public          Active   13h
+kube-system          Active   13h
+local-path-storage   Active   13h
+
+No resources found in ingress-ingix namespace.
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get pods --namespace ingress-nginx -> this pods is image 5's blue color pod and image 6 pod ruuing here
+NAME                                                    READY   STATUS    RESTARTS   AGE
+nginx-ingress-ingress-nginx-controller-67c86b68-8klg9   1/1     Running   0          5m
+
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get svc --namespace ingress-nginx -> this load balancer service is image 5 and image 6 load balancer ruuing here in cloud also it get created if you running it in could (image 8 new stated load balancer)
+NAME                                               TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                      AGE
+nginx-ingress-ingress-nginx-controller             LoadBalancer   10.96.92.162   <pending>     80:30282/TCP,443:31167/TCP   6m26s
+nginx-ingress-ingress-nginx-controller-admission   ClusterIP      10.96.61.248   <none>        443/TCP                      6m26s
+
+
+we stll need to tell rules to ingress that this is how you forward the req but we just create red line infrastructure as per (image 7)
+
+
+---------------------------------------------------------------- Adding the routing to the ingress controller slides
+now Adding the routing to the ingress controller
+Next up, we want to do the following - 
+
+image 9 // now same url but diff route and single loadbalancer
+
+Get rid of all existing deployments in the default namespace
+kubectl get deployments
+kubectl delete deployment_name
+
+Get rid of all the services in the default namespace (dont delete the default kubernetes service, delete the old nginx and apache loadbalancer services)
+ kubectl get services
+ kubect
+
+Create a deployment and service definition for the nginx image/app (this is different from the nginx controller)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: default
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+Create a deployment and service for the apache app
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apache-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: apache
+  template:
+    metadata:
+      labels:
+        app: apache
+    spec:
+      containers:
+      - name: my-apache-site
+        image: httpd:2.4
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apache-service
+  namespace: default
+spec:
+  selector:
+    app: apache
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+Create the ingress resource
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-apps-ingress
+  namespace: default #stated in default namespace
+  annotations: # when you are string ingress or similar services in future the you can change some data in them you can tolk to them using these annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /  # the acnotation that we are using is this, where can find it goes to the ingress docs, why we are adding this beacuse any request coming from k8s.100xdevs.com/apache should goes to second service and reach to coorect pod where appache is ruunig and same thing for k8s.100xdevs.com/nginx(see image 9), 
+    # so this mean any req comming from from k8s.100xdevs.com/apache (mean /) goes to at / path to service not apache, and that is why we added rewrite-target to / so that it goes to correct service and pod , else if i do not add this then req goes to /appche in service
+spec:
+  ingressClassName: nginx # there aare many infress controllers so we need to tell which one to use 3) types we discussed above
+  rules:
+  - host: your-domain.com # if req comes to this domain, evern we do not own this your-domain.com still we will make it work
+    http:
+      paths:
+      - path: /nginx # if req comes to k8s.100xdevs.com/nginx then
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service # it goes to nginx-service
+            port:
+              number: 80
+      - path: /apache # if req comes to k8s.100xdevs.com/apache then
+        pathType: Prefix
+        backend:
+          service:
+            name: apache-service # it goes to apache-service
+            port:
+              number: 80
+
+
+
+Combined manifest
+Create a combined manifest with all the api objects
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: default
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apache-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: apache
+  template:
+    metadata:
+      labels:
+        app: apache
+    spec:
+      containers:
+      - name: my-apache-site
+        image: httpd:2.4
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apache-service
+  namespace: default
+spec:
+  selector:
+    app: apache
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-apps-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: your-domain.com
+    http:
+      paths:
+      - path: /nginx
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service
+            port:
+              number: 80
+      - path: /apache
+        pathType: Prefix
+        backend:
+          service:
+            name: apache-service
+            port:
+              number: 80
+
+Apply the manifest
+kubectl apply -f complete.yml
+
+notion image
+Update your local hosts entry (/etc/hosts  ) such that your-domain.com points to the IP of your load balancer
+65.20.84.86	your-domain.com
+
+Try going to your-domain.com/apache and your-domain.com/nginx
+
+---------------------------------------------------------------- Adding the routing to the ingress controller slides
+
+
+now apply all thing one by one to create stucter like image 9
+
+1) 10-de...yml
+1) 11-de...yml
+1) 12-ingress.yml
+
+or run just one file insted of three which is 13-ingress-full.yml
+
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl apply -f 13-ingress-full.yml 
+deployment.apps/nginx-deployment created
+service/nginx-service created
+deployment.apps/apache-deployment created
+service/apache-service created
+ingress.networking.k8s.io/web-apps-ingress created
+
+so our image 9 entire architecture is created\
+
+now every thing is find you can directly hit load balaner ip via your domain and you are good to go but because you add your-domain.com(which you do not own) so you have to spoof your domain for your mahine 
+
+so go in // sudo vi /etc/hosts
+
+and take your loadbalncer ip and add entry with your-domain.com so your domain start working locally, instead in read word you add your domain 
+
+

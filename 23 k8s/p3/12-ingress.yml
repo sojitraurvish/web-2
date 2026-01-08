@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-apps-ingress
+  namespace: default #stated in default namespace
+  annotations: # when you are string ingress or similar services in future the you can change some data in them you can tolk to them using these annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /  # the acnotation that we are using is this, where can find it goes to the ingress docs, why we are adding this beacuse any request coming from k8s.100xdevs.com/apache should goes to second service and reach to coorect pod where appache is ruunig and same thing for k8s.100xdevs.com/nginx(see image 9), 
+    # so this mean any req comming from from k8s.100xdevs.com/apache (mean /) goes to at / path to service not apache, and that is why we added rewrite-target to / so that it goes to correct service and pod , else if i do not add this then req goes to /appche in service
+spec:
+  ingressClassName: nginx # there aare many infress controllers so we need to tell which one to use 3) types we discussed above
+  rules:
+  - host: your-domain.com # if req comes to this domain, evern we do not own this your-domain.com still we will make it work
+    http:
+      paths:
+      - path: /nginx # if req comes to k8s.100xdevs.com/nginx then
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service # it goes to nginx-service
+            port:
+              number: 80
+      - path: /apache # if req comes to k8s.100xdevs.com/apache then
+        pathType: Prefix
+        backend:
+          service:
+            name: apache-service # it goes to apache-service
+            port:
+              number: 80
