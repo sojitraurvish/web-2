@@ -1551,6 +1551,8 @@ see iamge 16
  
 -----------------lets first does cofig maps parctical
 
+you need to use 3 yml files 14,15,16
+
 you can also create config map using cli like // kubectl create configmap - but it is not ideal so go with the file option and create with that
 
  urvishsojitra@Urvishs-Mac-mini p3 % kubectl apply -f 14-configmap.yml 
