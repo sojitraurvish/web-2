@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-dotfiles-pod
+spec:
+  containers:
+    - name: dotfile-test-container
+      image: nginx
+      ports:
+      - containerPort: 80
+      env:
+      - name: DATABASE_URL  # this values you get form 1st tyeps of secrates
+        valueFrom:
+          secretKeyRef: # if you are getting data form secret
+            name: dotfile-secret  # name of the secret
+            key: database_url # key of the secret
+      # - name: CACHE_SIZE
+      #   valueFrom:
+      #     configMapKeyRef: # if you are getting data form configmap
+      #       name: ecom-backend-config
+      #       key: cache_size
+
+
+ # so your .env file in you secrats from there you create a local part as or volume and then mount it in your container from there
+  # see iamge 18 also see file 17.yml and 18.yml for better understanding   
+      volumeMounts: #2 now it is depends on your container that do i want to mount this spcifc env-file or secific folder on this container
+        - name: env-file
+          readOnly: true
+          mountPath: "/etc/secret-volume" # in our case it is not this directory in our app root directory is app check your docker image work or root directory which is app, do not write only /app you have to write /app/.env other wise it will replace the entire app folder // and to check it by going inside the pod new COMMAND - kubectl exec -i <pod-name> /bin/bash and if here you look inside app folder then you have /env folder and in side that you have .env file you sill there is probelm so in your project you can set dotenv config to pic envaroment vars form here .env/.env from here, if you only write /app then you are telling you have to load .env file in app folder and thus it romoves everyting else so instead that wite /<root docker image dir>/config  and in your actual app dotenv config pic it from "./config/.env"
+    volumes: #1 the deplyment i am starting it has buch of volumes we just one for e.g, so event before pod is created we tell the deplyment that you have access to all these bellow volumes, so it is name is env-file, and it is comes from secrate who's name is dotfile-secrate, so this volume comes from secrate as file, can i put something else here if you hard nfs - network file storeage, elastic block storages buch of places where you can persist data and put it here, so here i am telling secrate over here i want mounted as file over here, and app of the above pods or containers have access to this volome, what ever they want they can pic it is not nessasory to put above step if i want this volume to use in my any of above container then i ahve to do above step and mount this volume in that container to use
+      - name: env-file
+        secret:
+          secretName: dotfile-secret

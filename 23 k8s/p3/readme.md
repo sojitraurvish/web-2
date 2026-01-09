@@ -1372,36 +1372,41 @@ A ConfigMap allows you to decouple environment-specific configuration from your 
 Creating a ConfigMap
 Create the manifest
 
-apiVersion: v1
+# if you do like this then multiple applicaotin can use these env variables
+apiVersion: v1 
 kind: ConfigMap
 metadata:
   name: ecom-backend-config
-data: 
-  # inject these as env vars
+data:
+  # 1st tyeps of secrates
   database_url: "mysql://ecom-db:3306/shop"
-  cache_size: "1000" 
+  cache_size: "1000"
   payment_gateway_url: "https://payment-gateway.example.com"
   max_cart_items: "50"
   session_timeout: "3600"
 
+  # 2nd tyeps of secrates
   # file-like keys if i want to create .env file eventually then so in your final pod where your app is there it will create .env file there
-  application.properties: | app.name=ecom-backend
-  app.environment-production logging.level=INFO
-  max.connections=100
-  database.properties: I
-  db.driverClassName=com.mysql.cj.jdbc.Driver
-  db.username=ecom_user
-  db.password-securepassword
-  db.maxPoolSize=20
-  cache.properties: I
-  cache.type=redis
-  cache.host=redis-cache
-  cache.port=6379
-  cache.ttl=600
-  payment.properties: I
-  gateway.url=https://payment-gateway.example.com
-  gateway.apiKey-your_api_key_here
-  gateway.timeout=30
+  application.properties: | # i want this to reach as file in my final pod
+    app.name=ecom-backend
+    app.environment-production logging.level=INFO
+    max.connections=100
+  database.properties: |
+    db.driverClassName=com.mysql.cj.jdbc.Driver
+    db.username=ecom_user
+    db.password-securepassword
+    db.maxPoolSize=20
+  cache.properties: |
+    cache.type=redis
+    cache.host=redis-cache
+    cache.port=6379
+    cache.ttl=600
+  payment.properties: |
+    gateway.url=https://payment-gateway.example.com
+    gateway.apiKey-your_api_key_here
+    gateway.timeout=30
+
+
 
 
 
@@ -1464,6 +1469,8 @@ see image 15
 
 Try running using k8s locally
 Create the manifest (express-app.yml)
+
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1484,10 +1491,10 @@ spec:
         ports:
         - containerPort: 3000
         env:
-        - name: DATABASE_URL
+        - name: DATABASE_URL  # this values you get form 1st tyeps of secrates
           valueFrom:
             configMapKeyRef:
-              name: ecom-backend-config
+              name: ecom-backend-config 
               key: database_url
         - name: CACHE_SIZE
           valueFrom:
@@ -1509,6 +1516,14 @@ spec:
             configMapKeyRef:
               name: ecom-backend-config
               key: session_timeout
+        volumeMounts: #  # this values you get form 2nd tyeps of secrates // see image 18
+        - name: config-volume
+          mountPath: /etc/config
+          readOnly: true
+      volumes:   # create a voume which pick all the configration from this config map which we created above ecom-backend-config 
+      - name: config-volume
+        configMap:
+          name: ecom-backend-config
 
 Apply the manifest
  kubectl apply -f express-app.yml
@@ -1534,15 +1549,183 @@ Try visiting the website
 
 see iamge 16
  
- lets first does cofig maps parctical
+-----------------lets first does cofig maps parctical
 
- urvishsojitra@Urvishs-Mac-mini p3 % kubectl apply -f 14-deployment.yml 
+you can also create config map using cli like // kubectl create configmap - but it is not ideal so go with the file option and create with that
+
+ urvishsojitra@Urvishs-Mac-mini p3 % kubectl apply -f 14-configmap.yml 
 configmap/ecom-backend-config created
 
  urvishsojitra@Urvishs-Mac-mini p3 % kubectl get configmap
 NAME                  DATA   AGE
 ecom-backend-config   9      11s
 kube-root-ca.crt      1      16h
+
+// to get all actual vars in config maps
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl describe cm 
+      Name:         ecom-backend-config
+      Namespace:    default
+      Labels:       <none>
+      Annotations:  <none>
+
+      Data
+      ====
+      application.properties:
+      ----
+      app.name=ecom-backend
+      app.environment-production logging.level=INFO
+      max.connections=100
+
+
+      cache.properties:
+      ----
+      cache.type=redis
+      cache.host=redis-cache
+      cache.port=6379
+      cache.ttl=600
+
+
+      cache_size:
+      ----
+      1000
+
+      database.properties:
+      ----
+      db.driverClassName=com.mysql.cj.jdbc.Driver
+      db.username=ecom_user
+      db.password-securepassword
+      db.maxPoolSize=20
+
+kubectl apply -f 15-deployment.yml  
+deployment.apps/ecom-backend-deployment created
+
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl get pods
+NAME                                     READY   STATUS              RESTARTS   AGE
+ecom-backend-deployment-b9f75cb4-s8cd5   0/1     ContainerCreating   0          88s
+
+if pod is not ruuning then get lods or describe it 
+kubectl get pods
+kubectl logs -f <name form above command>
+or
+kubectl describe pods <name from above command>
+
+urvishsojitra@Urvishs-Mac-mini p3 % kubectl apply -f 16-service.yml 
+service/ecom-backend-service created
+
+-----------------lets first does cofig maps parctical
+
+
+-------------------------------------secrates slides
+
+Secrets
+Secrets are also part of the kubernetes v1 api. They let you store passwords / sensitive data which can then be mounted on to pods as environment variables. Using a Secret means that you don't need to include confidential data in your application code.
+Ref - https://kubernetes.io/docs/concepts/configuration/secret/
+Using a secret
+Create the manifest with a secret and pod (secret value is base64 encoded) (https://www.base64encode.org/)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dotfile-secret
+data:
+  .env: REFUQUJBU0VfVVJMPSJwb3N0Z3JlczovL3VzZXJuYW1lOnNlY3JldEBsb2NhbGhvc3QvcG9zdGdyZXMi # this we have to pass base64 encoded because, because when you deploy ssh certification and that might have some special charater so you pass as base64 and it will encode it to normal text in your container
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-dotfiles-pod
+spec:
+  containers:
+    - name: dotfile-test-container
+      image: nginx
+      volumeMounts:
+        - name: env-file
+          readOnly: true
+          mountPath: "/etc/secret-volume"
+  volumes:
+    - name: env-file
+      secret:
+        secretName: dotfile-secret
+
+notion image
+
+Try going to the container and exploring the .env
+kubectl exec -it secret-dotfiles-pod /bin/bash
+cd /etc/secret-volume/
+ls
+
+Base64 encoding
+Whenever you’re storing values in a secret, you need to base64 encode them. They can still be decoded , and hence this is not for security purposes. This is more to provide a standard way to store secrets, incase they are binary in nature. 
+For example, TLS (https) certificates that we’ll be storing as secrets eventually can have non ascii characters. Converting them to base64 converts them to ascii characters.
+ 
+Secrets as env variables
+You can also pass in secrets as environment variables to your process (similar to how we did it for configmaps in the last slide)
+Create the secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+data:
+  username: YWRtaW4=  # base64 encoded 'admin'
+  password: cGFzc3dvcmQ=  # base64 encoded 'password'
+
+Create the pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-env-pod
+spec:
+  containers:
+  - name: my-container
+    image: busybox
+    command: ["/bin/sh", "-c", "echo Username: $USERNAME; echo Password: $PASSWORD; sleep 3600"]
+    env:
+    - name: USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: my-secret
+          key: username
+    - name: PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: my-secret
+          key: password
+-------------------------------------secrates slides
+
+Note - we can crate configmaps and secrates via two ways 1) diractly create variables that will get values directly in your container
+2) create env file so you have to write it here in yml file in certainer formate and that file will be there inside your cluser or pod or container that you have to check 
+
+secearates practical
+
+17 - how to create secrests  
+18 - want to use in deplyment while creating pod
+
+frist apply 17 file and and then 18
+
+
+at above we learn about first way in both configmap and secrates 
+now leats learn about 2 way entire .env file
+
+so you do not push your .env in your github repo and that is why it does not present in your docker image or container as well 
+so in .gitignore and .dockerignore add .
+
+convert all .env file vars in based64 (see image 20) and see file 17
+
+// in docker if you want your local machine ka file reach to your docker container the we use - volume mount => bind mounts
+and in case of data base -> we use general volumes in docker container 
+
+so and voluems have very similar concept in k8s as well, so volume let you put your file in you container file, so you can tell your container that take this volume form here, so see image 19 when you start your container and before that you create secrate then your secrect exists in some /etc/secret-volume/.env so from there you want ot put in your container to your app to access so how you will do that, using volume mounts
+
+
+ # so your .env file in you secrats from there you create a local part as or volume and then mount it in your container from there
+  # see iamge 18 also see file 17.yml and 18.yml for better understanding   
+      volumeMounts: #2 now it is depends on your container that do i want to mount this spcifc env-file or secific folder on this container
+        - name: env-file
+          readOnly: true
+          mountPath: "/etc/secret-volume" # in our case it is not this directory in our app root directory is app check your docker image work or root directory which is app, do not write only /app you have to write /app/.env other wise it will replace the entire app folder // and to check it by going inside the pod new COMMAND - kubectl exec -i <pod-name> /bin/bash and if here you look inside app folder then you have /env folder and in side that you have .env file you sill there is probelm so in your project you can set dotenv config to pic envaroment vars form here .env/.env from here, if you only write /app then you are telling you have to load .env file in app folder and thus it romoves everyting else so instead that wite /<root docker image dir>/config  and in your actual app dotenv config pic it from "./config/.env"
+    volumes: #1 the deplyment i am starting it has buch of volumes we just one for e.g, so event before pod is created we tell the deplyment that you have access to all these bellow volumes, so it is name is env-file, and it is comes from secrate who's name is dotfile-secrate, so this volume comes from secrate as file, can i put something else here if you hard nfs - network file storeage, elastic block storages buch of places where you can persist data and put it here, so here i am telling secrate over here i want mounted as file over here, and app of the above pods or containers have access to this volome, what ever they want they can pic it is not nessasory to put above step if i want this volume to use in my any of above container then i ahve to do above step and mount this volume in that container to use
+      - name: env-file
+        secret:
+          secretName: dotfile-secret
 
 -------------------------------------------------slides for configmaps and secrets
 
