@@ -1729,6 +1729,20 @@ so and voluems have very similar concept in k8s as well, so volume let you put y
         secret:
           secretName: dotfile-secret
 
--------------------------------------------------slides for configmaps and secrets
+
+so this was about secrate and same thing you can do in configmap as well see 14.yml file at there we did and while creatething container you can mount same way as above 
+
+-------------------------------------------------slides for configmaps and 
+
+
+NOTE - HOW ci-cd flow works in k8s - check both approach together
+you have to runs k8s fils via ci-cd after new image is pushed
+or can use argo cd wich makes your life even easy - you can craete a seperate repo like cms-k8s where you can put all of your manifests and deployemt files and all you have to do, after you push to docker hub, you have to update this other repo inside that deplyment.yml / image:100xdevs/env-backend:update-new-hash so yo have to update image here and kubectl apply happens automatically via argo cd(it let you do that) 
+here you maintain two rempo one is argo-cd one and one is where trafrom script in ops folder and your source code, when you update your source code then you have to upate image in argo-db wali repo (see image 22)
+
+second way to do above same thing
+also see the the (iamge 21) remember to create and cluster and s3 bucket you put that scripts in traform folder and you run it once or you when you change your cloud provider, and k8s file you apply and reapply multiple times
+
+
 
 
