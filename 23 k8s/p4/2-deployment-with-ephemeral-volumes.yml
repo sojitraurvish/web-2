@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shared-volume-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shared-volume-app
+  template:
+    metadata:
+      labels:
+        app: shared-volume-app
+    spec:
+      containers: # we have two conainers, becasuse we are trying to crate image 4
+      - name: writer
+        image: busybox # this image infinitely runs think of it as infintie while loop
+        command: ["/bin/sh", "-c", "echo 'Hello from Writer Pod' > /data/hello.txt; sleep 3600"] # i want to run this command inside the container once, write echo measasge in site this data/hello.txt file and then sleep for an hour, so this data folder we will mount to this blue volume, so writer is about write in the volume and reader is about to read fromt this blue volume // see image 4
+        volumeMounts:
+        - name: shared-data
+          mountPath: /data
+      - name: reader
+        image: busybox
+        command: ["/bin/sh", "-c", "cat /data/hello.txt; sleep 3600"] # thsi read data and print
+        volumeMounts: # contimue..... , then your container con decide that i want to use this shared-data volume and same thing for above
+        - name: shared-data
+          mountPath: /data
+      volumes: # describe all the vlume that you want to create contimue.....
+      - name: shared-data
+        emptyDir: {} # 1 this mean i will start with the pod but when pod dies i will also dies
