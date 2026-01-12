@@ -2318,3 +2318,401 @@ app.listen(3000, () => {
 The app is deployed at https://hub.docker.com/r/100xdevs/week-28
 
  docker run -p 3000:3000 100xdevs/week-28
+
+ // at fist let's try to deploy this application without horizontal pod autoscaller for above image 
+
+
+and need to start two things deplyemnt and service 3-deplyment.yml and 4-services.yml
+
+
+ Creating the manifests
+Hardcoded replicas
+Lets try to create a deployment with hardcoded set of replicas
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cpu-app
+  template:
+    metadata:
+      labels:
+        app: cpu-app
+    spec:
+      containers:
+      - name: cpu-app
+        image: 100xdevs/week-28:latest
+        ports:
+        - containerPort: 3000
+
+Create a serice
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpu-service
+spec:
+  selector:
+    app: cpu-app #any pod with started with this lables
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
+
+
+so untill now we ware not autoscaling so nothing is happeing when one pod alone goes above 50%
+
+// now lets apply this hpa and see that will it does what is says it does
+
+
+
+
+With a horizontal pod accelerator
+Add HPA manifest
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cpu-hpa # name of my hpa
+spec:
+  scaleTargetRef: # what am i trying to scale?
+    apiVersion: apps/v1
+    kind: Deployment # a deplymentment - ans of above qs
+    name: cpu-deployment # with the name cpu-deployment - this is deployment whos replicas i want to change based on bellow metrics
+  minReplicas: 2 # the minimum no of repolicas i want is two 
+  maxReplicas: 5 # the minimum no of repolicas i want is five and these are pod replicas not the node repolicas
+  metrics: # and the metics based on which we auto scale 
+  #this is the array so you can add more values here
+  - type: Resource # type is resource
+    resource:
+      name: cpu # and the resoruce is cpu
+      target: # target is 50%
+        type: Utilization # you can also play with this type based on the type of autoscaling you want to do, and this type === Utilization we will see in next slide, we also see the formula it usages to scale up and down
+        averageUtilization: 50 # but the average utilization we want is 50%, so as soon as avg utilization goes above 50% you scale up and if it goes bellow 50%, if after down saling scaling it remain bellow 50% then we auto scale it down, if you know you will have quickly spke the coose this no 50% or else you can pic 80% or more or less based on the reqirement
+
+Apply all three manifests
+kubectl apply -f service.yml
+kubectl apply -f deployment.yml
+kubectl apply -f hpa.yml
+
+💡
+You can scale up/down based on multiple metrics. 
+If either of the metrics goes above the threshold, we scale up
+If all the metrics go below the threshold, we scale down
+
+
+urvishsojitra@Urvishs-Mac-mini p5 % kubectl get hpa
+NAME      REFERENCE                   TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+cpu-hpa   Deployment/cpu-deployment   cpu: <unknown>/50%   2         5         2          30s
+
+it says that cpu percentage is cpu: <unknown>/50%, it should be 50% but i do not know what it is, so due to some reason it can not get the pods level metics
+
+i can get the pods leavel metrics if i do, but above guy cant, but why let see that
+urvishsojitra@Urvishs-Mac-mini p5 % kubectl top pods
+NAME                              CPU(cores)   MEMORY(bytes)   
+cpu-deployment-57c47946d7-bvsdv   1m           87Mi            
+cpu-deployment-57c47946d7-q2d97   1m           87Mi   
+
+so how can you debug that kubectl get hpa why it is not able to get the cpu percentage  <unknown>/50%, and if it wont be able to get cpu percentage it wont be scale up, because based on this no <unknown> it knows that it need to scale up or down
+
+urvishsojitra@Urvishs-Mac-mini p5 % kubectl describe hpa cpu-hpa 
+Name:                                                  cpu-hpa
+Namespace:                                             default
+Labels:                                                <none>
+Annotations:                                           <none>
+CreationTimestamp:                                     Mon, 12 Jan 2026 16:46:35 +0530
+Reference:                                             Deployment/cpu-deployment
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  <unknown> / 50%
+Min replicas:                                          2
+Max replicas:                                          5
+Deployment pods:                                       2 current / 0 desired
+Conditions:
+  Type           Status  Reason                   Message
+  ----           ------  ------                   -------
+  AbleToScale    True    SucceededGetScale        the HPA controller was able to get the target's current scale
+  ScalingActive  False   FailedGetResourceMetric  the HPA was unable to compute the replica count: failed to get cpu utilization: missing request for cpu in container cpu-app of Pod cpu-deployment-57c47946d7-bvsdv
+Events:
+  Type     Reason                        Age                   From                       Message
+  ----     ------                        ----                  ----                       -------
+  Warning  FailedComputeMetricsReplicas  10m (x12 over 13m)    horizontal-pod-autoscaler  *E invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: missing request for cpu in container cpu-app of Pod cpu-deployment-57c47946d7-bvsdv
+  Warning  FailedGetResourceMetric       3m36s (x37 over 13m)  horizontal-pod-autoscaler  failed to get cpu utilization: missing request for cpu in container cpu-app of Pod cpu-deployment-57c47946d7-bvsdva 
+
+  so for this error we get this 2 solutions // see image 4 so first solution we alreay sow above harkirat modified script and given github link, second solution it gives which is add pod level resources, what are resources and what are resource limitations we are about to discuss that eventually, but lets discuss it little bit first, why because 
+  wehn i do 
+
+urvishsojitra@Urvishs-Mac-mini p5 % kubectl get hpa
+NAME      REFERENCE                   TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+cpu-hpa   Deployment/cpu-deployment   cpu: <unknown>/50%   2         5         2          30s
+
+my hpa still has <unknown> for the cpu uages, it can not get the cpu usages, so how does it get fixed, if i can add resources in my pod or in deployment more specifically, if you look at the deployment you can also add resources limits
+what are resource limits, is that, that this specific pod atlist need half a core and at max one core, whenever pods starts then make sure that half a core is available on that specific node and make sure, that pod only taks 1 core that is called resource management 
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cpu-app
+  template:
+    metadata:
+      labels:
+        app: cpu-app
+    spec:
+      containers:
+      - name: cpu-app
+        image: 100xdevs/week-28:latest
+        ports:
+        - containerPort: 3000
+        # you have to add this in your deployment file, if you add this resource limits then hpa becomes happy and it able to fetch the resource or metics for the pod
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "256Mi"
+          limits: 
+            cpu: "1"
+            memory:"512Mi"
+
+
+see image 5 our k8s cluster has 4 vcpus and tow of them is for master node and only 2 of them for the worker node
+
+e.g if i have k8s cluster and inside that let say i have 2 worker nodes and each has 2 vcpus, so in node one whatever pods you stars that would be compiting for these 2 vcpus, so every pod that is starting will atleast take 0.5 vcpu, so when you are scheduling it it find 0.5 chore on each node where it fund it play it in that machine let say it find the fist node and play there then we now have 1.5 vcpu left to be clamed on this machine, so it mean if 4 pod is stated on node 1 then vcps become 0, so does it mean all the 2 cpus are being used? > no it is just that this pod atleast need half a vcpu, so it say that do not matter i use that space or not but point me in the machine where atleast 0.5 vcpu available ho, so if 4 pod is already schedule on this node then if 5th comes then it goes to diff node, so let say assume that we have started 2 node and form that one of the node is master node so you can not sechdue pod there right and first node is filled with four pods so now when you try to start 5th pod it will gives the error untill i start new node or untill this node also auto scaled up, so if some how when 5th pods is staring and it reallize that i do not have enough resources then what if new node is created and that is what called node auto scalling, but right now we are learning resoruce management
+
+and at above what is this limit section - that mean make sure that each pod can not takes the more then 1 vcpu, and should not takes the space for all other pods
+
+so add above resource lines in you deployment and reapply the 3-deployment.yml
+
+wait for hpa and you will get the metic value accesable via hpa
+urvishsojitra@Urvishs-Mac-mini p5 % kubectl get hpa
+NAME      REFERENCE                   TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+cpu-hpa   Deployment/cpu-deployment   cpu: 0%/50%   2         5         2          130m
+
+but way adding resorces fix this hpa issue, because it is cloud sepcific issue it might happens on aws and might not happend in gcp so ya..
+
+see image 5 our k8s cluster has 4 vcpus and tow of them is for master node and only 2 of them for the worker node
+
+and now if you send the req the it autoscale up  and down based on the load 
+do all above things and start sending 5 req, which all get stuck and start porcessing and you have 2 vcpus left for worker node you it can only auto scale up 4 pods not more then tahat so you will see that i will try to start 5 pod but will get error 
+
+kubectl get hpa
+kubectl get pods
+
+so the thing is due to we send 5 req it reaches to the capacity of 5 but why one pod is not running, because we have only 2 cpus avalable, each one of them req a half a cpu even though there is 0% usages because you said half a cpu so it will save half a cpu space for you even if you are not using it 
+
+so if you does 
+kubectl describe pod <id - name> 
+then i will say that you have to scale up the no of nodes that you have, you can goes to the dasboard and can increse it see image 6, no of nodes to let say 3, and then the 5th pod will get sechedule which was getting the error, or i can also decrese min cpu 500m to 300m then it could have started more pods in same node
+
+// image 7 formula for auto scalling, but ans - sealling(ans)  if ans is 3.1 then sealing(3.1) = 4 so it increse a replica
+
+<!-- see hortstare video they do not auto scale a lot they manually scale a lot because in as situaltion of spike they preprepare for the let say 2cr people if when ther match you can watch his autoscalling video, if you have spikey workload the autoscalling is really bed -->
+
+// see iamge 8 quiesion // the ans is i have 10 cores in my machine still i am able to run 100 process why because it use vairous algo like context switching, if single process can hoge a core then you can not run more then 10 process in your machine so, so half a core mean it context switch so 50% of time it does have cpu and 50% of time it does not have the cpu in a second like that
+
+<!-- what is serverless k8s and how it charge you? this is not like that what we are doing when new node started you change charge for that like that  -->
+
+
+
+// load test also you can do to check poads are auto scalling or not
+Try sending a bunch of requests to the server (or just visit it in the browser)
+npm i -g loadtest
+loadtest -c 10 --rps 200 http://65.20.89.70
+
+Check the CPU usage
+kubectl top pods   
+
+See the hpa average usage
+ kubectl get hpa
+
+Check the number of pods, see as they scale up
+kubectl get pods
+
+
+
+
+--------
+
+
+Resource requests and limits
+Ref - https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+When you specify a Pod, you can optionally specify how much of each resource a container needs. The most common resources to specify are CPU and memory (RAM).
+There are two types of resource types
+
+Resource requests
+The kubelet reserves at least the request amount of that system resource specifically for that container to use.
+
+Resource limits
+When you specify a resource limit for a container, the kubelet enforces those limits so that the running container is not allowed to use more of that resource than the limit you set. 
+
+Difference b/w limits and requests
+If the node where a Pod is running has enough of a resource available, it's possible (and allowed) for a container to use more resource than its request for that resource specifies. However, a container is not allowed to use more than its resource limit.
+Experiments
+30% CPU usage on a single threaded Node.js app
+Update the spec from the last slide to decrease the CPU usage. Notice that the CPU doesnt go over 30% even though this is a Node.js app where it can go up to 100%
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cpu-app
+  template:
+    metadata:
+      labels:
+        app: cpu-app
+    spec:
+      containers:
+      - name: cpu-app
+        image: 100xdevs/week-28:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "100m"
+          limits:
+            cpu: "300m"
+
+Try hitting the server
+SEE IMAGE 8
+ 
+Request 2 vCPU in 10 replicas
+Try requesting more resources than available in the cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-deployment
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: cpu-app
+  template:
+    metadata:
+      labels:
+        app: cpu-app
+    spec:
+      containers:
+      - name: cpu-app
+        image: 100xdevs/week-28:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "1000m"
+          limits:
+            cpu: "1000m"
+
+ SEE IMAGE 9
+
+
+in this second image it try to take full one cpu for single pod and i have 1 node with 2 cpus then 3rd pod you will not able to start, so either i have to start new pod manuall or cluster autoscalling
+
+
+// SEE IAMGE 14 - first enable this option of auto scalling it min nodes staty through the month then i will pay 90 and it it becomes max then i will pay 270$ or if it stay in between then i will pay based on my usage, and follow bello process
+
+Cluster autoscaling
+Ref - https://github.com/kubernetes/autoscaler
+Cluster Autoscaler - a component that automatically adjusts the size of a Kubernetes Cluster so that all pods have a place to run and there are no unneeded nodes. Supports several public cloud providers. Version 1.0 (GA) was released with kubernetes 1.8.
+ 
+Underprovisioned resources
+In the last slide, we saw that we didn’t have enough resources to schedule a pod on.
+SEE IMAGE 10 
+
+
+Let’s make our node pool dynamic and add a min  and max nodes.
+SEE IAMGE 11
+Restart the deployment
+kubectl delete deployment cpu-deployment
+kubectl apply -f deployment.yml
+
+Notice a new node gets deployed
+SEE IMAGE 12
+Logs of the cluster autoscaler
+ kubectl get pods -n kube-system | grep cluster-autoscaler
+SEE IMAGE 13
+Try downscaling
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-deployment
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: cpu-app
+  template:
+    metadata:
+      labels:
+        app: cpu-app
+    spec:
+      containers:
+      - name: cpu-app
+        image: 100xdevs/week-28:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          limits:
+            cpu: "500m"
+          requests:
+            cpu: "1000m"
+
+// NOTE : 1 node is able to handle 2 vcpus in that 4 pods can run wo we need 3 worker and 1 master totol 4 nodes up
+
+Notice the number of server goes down to 2 again
+Good things to learn after this - 
+Gitops (ArgoCD)
+Custom metrics based scaling, event based autoscaling - https://www.giffgaff.io/tech/event-driven-autoscaling
+Deploying prometheus in a k8s cluster, scaling based on custom metrics from prometheus
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Kubernetes Lab
+ 
+Base repository - https://github.com/code100x/algorithmic-arena/
+Things to do - 
+Create a PV, PVC for the postgres database.
+Create a PV, PVC for redis.
+Create deployments for redis, postgres.
+Create ClusterIP services for redis, postgres
+Create a deployment for the nextjs app, expose it via a loadbalancer service on ‣
+Create a deployment for the judge api server. Expose it via a ClusterIP service
+Create a deployment for the judge workers. Add resource limits and requests to it
+Create a HPA that scales based on the pending submission queue length in the redis queue
+You can either expose an endpoint that you use as a custom metric
+You can put all metrics in prometheus and pick them up from there
+You can use KEDA to scale based on redis queue length
+ 
+ see image 15
+
+
+ devops - youtube.com/watch?v=IjY34e7NfaU&t=1483s&pp=ygUZa3ViZXJuZXRlcyBoYXJraXJhdCBzaW5naA%3D%3D
+Repl.it - https://www.youtube.com/watch?v=s0kBqGpThp0
+codeforces.com https://www.youtube.com/watch?v=vABb1y4fmwE
+
+see image 16 question > node afanities or create other node pool, or karpanter
+
+see iamge 17 ws when ws doen or otherwise which server i join (state less servers)
+in statefull server you should take backup somewhere
+
+kadi let you do ingresses better
+karpenter let you start node automatilly so you do not need to crete node pool at your own

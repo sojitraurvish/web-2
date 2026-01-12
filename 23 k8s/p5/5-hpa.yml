@@ -1,0 +1,20 @@
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cpu-hpa # name of my hpa
+spec:
+  scaleTargetRef: # what am i trying to scale?
+    apiVersion: apps/v1
+    kind: Deployment # a deplymentment - ans of above qs
+    name: cpu-deployment # with the name cpu-deployment - this is deployment whos replicas i want to change based on bellow metrics
+  minReplicas: 2 # the minimum no of repolicas i want is two 
+  maxReplicas: 5 # the minimum no of repolicas i want is five and these are pod replicas not the node repolicas
+  metrics: # and the metics based on which we auto scale 
+  #this is the array so you can add more values here
+  - type: Resource # type is resource
+    resource:
+      name: cpu # and the resoruce is cpu
+      target: # target is 50%
+        type: Utilization # you can also play with this type based on the type of autoscaling you want to do, and this type === Utilization we will see in next slide, we also see the formula it usages to scale up and down
+        averageUtilization: 50 # but the average utilization we want is 50%, so as soon as avg utilization goes above 50% you scale up and if it goes bellow 50%, if after down saling scaling it remain bellow 50% then we auto scale it down, if you know you will have quickly spke the coose this no 50% or else you can pic 80% or more or less based on the reqirement
